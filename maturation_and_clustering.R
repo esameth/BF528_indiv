@@ -1,6 +1,7 @@
 #####################################################################
 # Biologist section                                                 #
 # Create line graphs of the FPKM values for each sample             #
+# and perform hierarchical clustering of samples                    #
 #####################################################################
 
 library(gplots)
@@ -24,6 +25,7 @@ P7_2 <- data.frame(fread('samples/P7_2.fpkm_tracking', select=c('gene_short_name
 Ad_1 <- data.frame(fread('samples/Ad_1.fpkm_tracking', select=c('gene_short_name', 'FPKM'), header=TRUE))
 Ad_2 <- data.frame(fread('samples/Ad_2.fpkm_tracking', select=c('gene_short_name', 'FPKM'), header=TRUE))
 
+########### Line graph
 # Get the average FPKM for each sample
 average <- function(geneList, rep_1, rep_2) {
   df <- merge(subset(rep_1, gene_short_name %in% geneList), 
@@ -74,3 +76,31 @@ cc$P4 <- average(cell_cycle, P4_1, P4_2)
 cc$P7 <- average(cell_cycle, P7_1, P7_2)
 cc$Ad <- average(cell_cycle, Ad_1, Ad_2)
 plot_fpkm(cc, 'C) Cell Cycle')
+
+
+
+########### Hierarchical Clustering
+# Read in Cuffdiff output
+cuffdiff <- read.table('cuffdiff_out/gene_exp.diff', header=TRUE)
+cuffdiff <- subset(cuffdiff, status == "OK" & significant == 'yes')
+
+# Determine duplicated genes in P0_1
+duplicates <- P0_1[duplicated(P0_1$gene_short_name), 'gene_short_name']
+
+# Get top 1000 DE genes in P0_1 and Ad that does not include the duplicates from P0_1
+cuffdiff_no_dup <- subset(cuffdiff, !gene %in% duplicates)
+genes <- cuffdiff[order(cuffdiff_no_dup$q_value), ]$gene[1:1000]
+
+FPKM_matrix <- merge(subset(P0_1, gene_short_name %in% genes), 
+                     subset(P0_2, gene_short_name %in% genes), 
+                     by='gene_short_name')
+
+FPKM_matrix <- merge(FPKM_matrix, P4_1, by='gene_short_name', all=TRUE)
+FPKM_matrix <- merge(FPKM_matrix, P4_2, by='gene_short_name', all=TRUE)
+FPKM_matrix <- merge(FPKM_matrix, P7_1, by='gene_short_name', all=TRUE)
+FPKM_matrix <- merge(FPKM_matrix, P7_2, by='gene_short_name', all=TRUE)
+FPKM_matrix <- merge(FPKM_matrix, Ad_1, by='gene_short_name', all=TRUE)
+FPKM_matrix <- merge(FPKM_matrix, Ad_1, by='gene_short_name', all=TRUE)
+
+
+
